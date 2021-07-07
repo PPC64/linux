@@ -247,8 +247,13 @@ static void __init maple_init_IRQ(void)
 	 * ISUs for now. I'll have to revisit some stuffs with the folks doing
 	 * the firmware for those
 	 */
+#ifndef CONFIG_SYSTEMSIM_BOOT
+	mpic = mpic_alloc(mpic_node, openpic_addr, flags,
+			  16, 0, " MPIC     ");
+#else
 	mpic = mpic_alloc(mpic_node, openpic_addr, flags,
 			  /*has_isus ? 16 :*/ 0, 0, " MPIC     ");
+#endif /* CONFIG_SYSTEMSIM_BOOT */
 	BUG_ON(mpic == NULL);
 
 	/* Add ISUs */

@@ -818,7 +818,21 @@ static void __init pSeries_setup_arch(void)
 			pv_spinlocks_init();
 		}
 
+#ifdef CONFIG_SYSTEMSIM_IDLE
+		struct device_node *systemsim_node;
+
+		systemsim_node = of_find_node_by_path("/systemsim");
+		if (systemsim_node) {
+			printk(KERN_INFO
+			 "Systemsim detected: Using optomized idle loop\n");
+			ppc_md.power_save = systemsim_idle;
+			of_node_put(systemsim_node);
+		} else {
+			ppc_md.power_save = pseries_lpar_idle;
+		}
+#else
 		ppc_md.power_save = pseries_lpar_idle;
+#endif
 		ppc_md.enable_pmcs = pseries_lpar_enable_pmcs;
 #ifdef CONFIG_PCI_IOV
 		ppc_md.pcibios_fixup_resources =
@@ -1031,8 +1045,18 @@ static void pseries_power_off(void)
 
 static int __init pSeries_probe(void)
 {
+	unsigned long root;
+	const char *dtype;
+
 	if (!of_node_is_type(of_root, "chrp"))
 		return 0;
+
+#ifndef CONFIG_SYSTEMSIM_BOOT
+	root = of_get_flat_dt_root();
+	dtype = of_get_flat_dt_prop(root, "device_type", NULL);
+	if (dtype == NULL)
+		return 0;
+#endif
 
 	/* Cell blades firmware claims to be chrp while it's not. Until this
 	 * is fixed, we need to avoid those here.
